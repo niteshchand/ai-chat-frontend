@@ -281,105 +281,78 @@ export default function Home() {
       },
     ])
 
-    try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/chat/stream`,
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type":
-              "application/json",
-
-            Authorization: `Bearer ${token}`,
-          },
-
-          body: JSON.stringify({
-            message: content,
-            conversation_id:
-              activeConv.id,
-          }),
-        }
-      )
-
-      if (!res.ok)
-        throw new Error("Backend error")
-
-      const reader = res.body!.getReader()
-
-      const decoder = new TextDecoder()
-
-      while (true) {
-        const { done, value } =
-          await reader.read()
-
-        if (done) break
-
-        const chunk =
-          decoder.decode(value)
-
-        const lines = chunk.split("\n")
-
-        for (const line of lines) {
-          if (
-            !line.startsWith("data: ")
-          )
-            continue
-
-          const data = line.replace(
-            "data: ",
-            ""
-          )
-
-          if (data === "[DONE]")
-            break
-
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === aiId
-                ? {
-                    ...msg,
-                    content:
-                      msg.content + data,
-                  }
-                : msg
-            )
-          )
-        }
-      }
-
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === activeConv.id
-            ? {
-                ...c,
-                title: content.slice(
-                  0,
-                  40
-                ),
-              }
-            : c
-        )
-      )
-
-      setAnnouncement(
-        "AI response received"
-      )
-
-      setTimeout(() => {
-        inputRef.current?.focus()
-      }, 100)
-    } catch (err) {
-      setError(
-        "Something went wrong. Is your Go backend running?"
-      )
-    } finally {
-      setLoading(false)
-
-      setStreamingId(null)
+  try {
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/chat/stream`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        message: content,
+        conversation_id: activeConv.id,
+      }),
     }
+  )
+
+  if (!res.ok) throw new Error("Backend error")
+
+  const reader = res.body!.getReader()
+  const decoder = new TextDecoder()
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      const chunk = decoder.decode(value, { stream: true })
+      const lines = chunk.split("\n")
+
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue
+
+        const data = line.replace("data: ", "").trim()
+
+        if (!data) continue
+        if (data === "[DONE]") break
+
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === aiId
+              ? { ...msg, content: msg.content + data }
+              : msg
+          )
+        )
+      }
+    }
+  } finally {
+    reader.releaseLock()
   }
 
+  setConversations((prev) =>
+    prev.map((c) =>
+      c.id === activeConv.id
+        ? { ...c, title: content.slice(0, 40) }
+        : c
+    )
+  )
+
+  setAnnouncement("AI response received")
+
+  setTimeout(() => {
+    inputRef.current?.focus()
+  }, 100)
+
+} catch (err) {
+  setError(
+    "Something went wrong. Is your Go backend running?"
+  )
+} finally {
+  setLoading(false)
+  setStreamingId(null)
+} }
   /* =========================================
      FILE UPLOAD
   ========================================= */
