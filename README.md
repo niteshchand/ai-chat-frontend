@@ -1,36 +1,149 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI Chat Frontend
+
+A production-grade AI chat frontend built with **Next.js 15** featuring real-time streaming, RAG-powered document chat, multi-conversation sidebar, and full accessibility support.
+
+🌐 **Live Demo:** [ai-chat-frontend-iota.vercel.app](https://ai-chat-frontend-iota.vercel.app)
+🔧 **Backend Repo:** [github.com/niteshchand/ai-chat-backend](https://github.com/niteshchand/ai-chat-backend)
+
+---
+
+## Features
+
+- **ChatGPT-style streaming** — Real-time token-by-token responses with blinking cursor
+- **Multi-conversation sidebar** — Create, switch, and delete conversations
+- **PDF document chat** — Upload any PDF and ask questions about it (RAG)
+- **Markdown rendering** — Syntax highlighted code blocks, tables, bold, lists
+- **JWT Authentication** — Login/register with cookie-based token persistence
+- **Accessibility** — WCAG 2.1 AA compliant with ARIA live regions, focus management
+- **Responsive layout** — Collapsible sidebar, works on all screen sizes
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Framework | Next.js 15 (App Router) |
+| Language | TypeScript |
+| Styling | Tailwind CSS |
+| Markdown | react-markdown + react-syntax-highlighter |
+| Icons | lucide-react |
+| Deployment | Vercel |
+
+---
+
+## Project Structure
+
+```
+ai-chat-frontend/
+├── app/
+│   ├── page.tsx           # Main chat page + all logic
+│   ├── login/page.tsx     # Login page
+│   ├── register/page.tsx  # Register page
+│   └── layout.tsx         # Root layout with AuthProvider
+├── components/
+│   ├── ChatWindow.tsx     # Message list with empty state
+│   ├── ChatBubble.tsx     # Individual message bubble
+│   ├── ChatInput.tsx      # Textarea + send button
+│   ├── MarkdownRenderer.tsx # Markdown + syntax highlighting
+│   ├── Sidebar.tsx        # Conversation list + new chat
+│   └── FileUpload.tsx     # PDF upload with validation
+├── context/
+│   └── AuthContext.tsx    # JWT token + user state
+└── types/
+    ├── chat.ts            # Message types
+    └── conversation.ts    # Conversation types
+```
+
+---
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+- Node.js 18+
+- Backend running → [ai-chat-backend](https://github.com/niteshchand/ai-chat-backend)
+
+### Setup
 
 ```bash
+# Clone
+git clone https://github.com/niteshchand/ai-chat-frontend.git
+cd ai-chat-frontend
+
+# Install
+npm install
+
+# Create .env.local
+echo "NEXT_PUBLIC_API_URL=http://localhost:8080" > .env.local
+
+# Run
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Environment Variables
 
-## Learn More
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8080
+```
 
-To learn more about Next.js, take a look at the following resources:
+For production point to your deployed backend URL.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Key Features Explained
 
-## Deploy on Vercel
+### Streaming Implementation
+Uses the browser's `ReadableStream` API to read SSE chunks from the Go backend. An empty AI message is added immediately, then filled token by token as chunks arrive — same pattern used by ChatGPT.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```tsx
+const reader = res.body!.getReader()
+const decoder = new TextDecoder()
+while (true) {
+  const { done, value } = await reader.read()
+  if (done) break
+  // append chunk to message
+}
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### RAG Integration
+Upload a PDF → backend processes it into vector embeddings → every subsequent message searches for relevant chunks → AI answers from your document.
+
+### Accessibility
+- `role="log"` on chat window announces new messages to screen readers
+- `aria-live="polite"` announces AI responses
+- Focus returns to input after every AI response
+- Skip link for keyboard navigation
+- All interactive elements have `aria-label`
+
+---
+
+## Screenshots
+
+| Login | Chat | PDF Upload |
+|-------|------|------------|
+| Clean login form | Multi-conversation sidebar | One-click PDF processing |
+
+---
+
+## Deployment
+
+Deployed on Vercel with zero config — Next.js auto-detected.
+
+```bash
+# Build check before deploying
+npm run build
+
+# Deploy via git push
+git push origin main
+# Vercel auto-deploys on every push
+```
+
+---
+
+## License
+
+MIT
